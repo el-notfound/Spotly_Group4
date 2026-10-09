@@ -20,6 +20,10 @@ Spotly is a PHP/MySQL laboratory reservation system for SOIT Cisco Laboratories 
 
 The default local database settings are host `localhost`, user `root`, and an empty password. Update `config/db.php` if the local MySQL installation uses different credentials.
 
+## Advance Reservations
+
+On the dashboard, use the calendar date picker or **Next** to view future availability. Users can request a reservation for any future date; there is no advance-booking cutoff. Each reservation can be from 30 minutes up to 4 hours, selected in 30-minute calendar slots. Times are evaluated in Manila time. For same-day bookings, the start time must be at least the next available 30-minute slot.
+
 ## Demo Accounts
 
 | Role | Email | Password |

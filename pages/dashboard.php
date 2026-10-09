@@ -56,7 +56,7 @@ require_once __DIR__ . '/../includes/header.php';
 	</div>
 	<p id="calendar-message" class="calendar-message" aria-live="polite"></p>
 	<div id="calendar-grid" class="calendar-grid" aria-live="polite"></div>
-	<p class="calendar-hint">Select an available start time, then an end time to request a reservation.</p>
+	<p class="calendar-hint">Use the date picker or Next to see future dates. Reservations can be made for any future date; today’s slots begin at the next available 30-minute mark. Click an available slot to set the start, then a later slot to set the end (up to 4 hours). The selected end slot’s bottom marks the reservation end time.</p>
 </section>
 
 <section class="catalog-section">

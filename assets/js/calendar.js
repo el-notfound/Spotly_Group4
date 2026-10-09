@@ -10,6 +10,7 @@
 		selectionStart: null,
 		selectionEnd: null
 	};
+	const maxReservationMinutes = 4 * 60;
 
 	const elements = {
 		labType: document.querySelector('#lab-type'),
@@ -50,6 +51,35 @@
 		const month = String(date.getMonth() + 1).padStart(2, '0');
 		const day = String(date.getDate()).padStart(2, '0');
 		return `${year}-${month}-${day}`;
+	}
+
+	function businessDate() {
+		const parts = new Intl.DateTimeFormat('en-CA', {
+			timeZone: 'Asia/Manila',
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		}).formatToParts(new Date());
+		const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+		return parseDate(`${values.year}-${values.month}-${values.day}`);
+	}
+
+	function nextBusinessBookingStartMinutes() {
+		const parts = new Intl.DateTimeFormat('en-GB', {
+			timeZone: 'Asia/Manila',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit',
+			hourCycle: 'h23'
+		}).formatToParts(new Date());
+		const values = Object.fromEntries(parts.map(({ type, value }) => [type, Number(value)]));
+		const secondsSinceMidnight = (values.hour * 3600) + (values.minute * 60) + values.second;
+		return Math.ceil(secondsSinceMidnight / (30 * 60)) * 30;
+	}
+
+	function slotHasPassed(date, time) {
+		const today = formatDate(businessDate());
+		return date < today || (date === today && timeToMinutes(time) < nextBusinessBookingStartMinutes());
 	}
 
 	function parseDate(value) {
@@ -237,7 +267,7 @@
 		const slotStart = timeToMinutes(time);
 		const slotEnd = slotStart + 30;
 		const reservation = state.reservations.find((item) => item.date === date && timeToMinutes(item.start_time) < slotEnd && timeToMinutes(item.end_time) > slotStart);
-		const past = new Date(`${date}T${time}:00`) < new Date();
+		const past = slotHasPassed(date, time);
 		let slotType = 'available';
 		let message = 'Available. Select this slot as a start or end time.';
 		if (roomIsUnavailable() || past) {
@@ -297,6 +327,8 @@
 			} else if (selected.start <= state.selectionStart.start) {
 				state.selectionStart = selected;
 				elements.calendarMessage.textContent = 'Start updated. Choose an end time after it.';
+			} else if (timeToMinutes(selected.end) - timeToMinutes(state.selectionStart.start) > maxReservationMinutes) {
+				elements.calendarMessage.textContent = 'Reservations can be up to 4 hours long. Choose an earlier end time.';
 			} else {
 				state.selectionEnd = selected;
 				openBookingModal(state.selectionStart, selected);
@@ -402,7 +434,7 @@
 		loadSchedule();
 	});
 	elements.todayButton.addEventListener('click', () => {
-		state.selectedDate = new Date();
+		state.selectedDate = businessDate();
 		loadSchedule();
 	});
 	elements.previousButton.addEventListener('click', () => {
@@ -424,6 +456,7 @@
 	document.querySelector('#close-calendar-cancel').addEventListener('click', () => elements.calendarCancelModal.close());
 	window.addEventListener('resize', renderGrid);
 
+	state.selectedDate = businessDate();
 	elements.calendarDate.value = formatDate(state.selectedDate);
 	loadRooms();
 }());

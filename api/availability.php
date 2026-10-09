@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth_check.php';
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/settings.php';
 require_once __DIR__ . '/../includes/release_noshows.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -63,6 +64,9 @@ if ($mode === 'check') {
 	if ($room_id === false || !$selected_date || $has_date_errors || $date !== $selected_date->format('Y-m-d') || $date < date('Y-m-d') || $start_minutes === null || $end_minutes === null || $start_minutes < 420 || $end_minutes > 1260 || $end_minutes <= $start_minutes) {
 		availability_response(['success' => false, 'message' => 'Choose a valid date and time between 7:00 AM and 9:00 PM.'], 400);
 	}
+	if ($end_minutes - $start_minutes > MAX_RESERVATION_MINUTES) {
+		availability_response(['success' => false, 'message' => 'A reservation can be up to 4 hours long.'], 400);
+	}
 
 	$room_statement = $pdo->prepare('SELECT room_id, room_name, room_code, capacity, status FROM laboratories WHERE room_id = :room_id LIMIT 1');
 	$room_statement->execute(['room_id' => $room_id]);
@@ -73,6 +77,10 @@ if ($mode === 'check') {
 
 	if ($room['status'] !== 'Available') {
 		availability_response(['success' => true, 'available' => false, 'message' => $room['status'] . '. This laboratory cannot be booked.']);
+	}
+
+	if ($date === date('Y-m-d') && $start_minutes < next_booking_start_minutes()) {
+		availability_response(['success' => true, 'available' => false, 'message' => 'This time has already passed. Choose a later 30-minute slot.']);
 	}
 
 	$conflict_statement = $pdo->prepare(

@@ -42,13 +42,14 @@ $purpose = trim((string) ($input['purpose'] ?? ''));
 $course_section = trim((string) ($input['course_section'] ?? ''));
 $expected_attendees = filter_var($input['expected_attendees'] ?? null, FILTER_VALIDATE_INT);
 $selected_date = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+$now = new DateTimeImmutable('now');
 $date_errors = DateTimeImmutable::getLastErrors();
 $has_date_errors = is_array($date_errors) && ($date_errors['warning_count'] > 0 || $date_errors['error_count'] > 0);
 
 if ($room_id === false) {
 	reservation_response(['success' => false, 'message' => 'Please choose a valid laboratory.'], 400);
 }
-if (!$selected_date || $has_date_errors || $date !== $selected_date->format('Y-m-d') || $date < date('Y-m-d')) {
+if (!$selected_date || $has_date_errors || $date !== $selected_date->format('Y-m-d') || $date < $now->format('Y-m-d')) {
 	reservation_response(['success' => false, 'message' => 'The reservation date must be today or a future date.'], 400);
 }
 
@@ -64,9 +65,11 @@ $end_minutes = reserve_time_to_minutes($end_time);
 if ($start_minutes === null || $end_minutes === null || $end_minutes <= $start_minutes || $start_minutes < 420 || $end_minutes > 1260) {
 	reservation_response(['success' => false, 'message' => 'The time must be between 7:00 AM and 9:00 PM, with the end time after the start time.'], 400);
 }
-if ($date === date('Y-m-d')) {
-	$rounded_now = (int) (ceil((time() - strtotime('today')) / (BOOKING_START_SLOT_MINUTES * 60)) * BOOKING_START_SLOT_MINUTES);
-	if ($start_minutes < $rounded_now) reservation_response(['success' => false, 'message' => 'Today\'s reservation must start at or after the next available 30-minute slot.'], 400);
+if ($end_minutes - $start_minutes > MAX_RESERVATION_MINUTES) {
+	reservation_response(['success' => false, 'message' => 'A reservation can be up to 4 hours long.'], 400);
+}
+if ($date === $now->format('Y-m-d')) {
+	if ($start_minutes < next_booking_start_minutes($now)) reservation_response(['success' => false, 'message' => 'Today\'s reservation must start at or after the next available 30-minute slot.'], 400);
 }
 if ($purpose === '' || strlen($purpose) > 150) {
 	reservation_response(['success' => false, 'message' => 'Purpose is required and must be 150 characters or fewer.'], 400);
